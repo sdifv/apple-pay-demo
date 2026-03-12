@@ -6,40 +6,25 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 443;
 
-// Railway 环境变量调试
-console.log('[Railway] 所有环境变量:', Object.keys(process.env).filter(k => k.includes('APPLE') || k.includes('CERT') || k.includes('RAILWAY')));
-console.log('[Railway] PORT:', process.env.PORT);
-console.log('[Railway] RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
-
 // 中间件
 app.use(express.json());
 
-// Apple Pay 域名验证文件 - 必须放在 express.static 之前，确保正确响应
+// Apple Pay 域名验证文件
 app.get('/.well-known/apple-developer-merchantid-domain-association', (req, res) => {
   const filePath = path.join(__dirname, 'public', '.well-known', 'apple-developer-merchantid-domain-association');
   
-  console.log('[Apple Pay] 验证文件请求来自:', req.headers['user-agent'] || 'Unknown');
-  console.log('[Apple Pay] 请求 IP:', req.ip);
-  
-  // 检查文件是否存在
   if (!fs.existsSync(filePath)) {
-    console.error('[Apple Pay] 验证文件不存在:', filePath);
     return res.status(404).send('Verification file not found');
   }
   
-  // 读取并发送文件内容
   try {
     const content = fs.readFileSync(filePath, 'utf8');
-    
-    // 设置正确的 HTTP 头
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Length', Buffer.byteLength(content));
     res.setHeader('Cache-Control', 'public, max-age=0');
-    
-    console.log('[Apple Pay] 验证文件已提供，大小:', content.length, 'bytes');
     res.send(content);
   } catch (err) {
-    console.error('[Apple Pay] 读取验证文件失败:', err.message);
+    console.error('[Apple Pay] 验证文件读取失败:', err.message);
     res.status(500).send('Error reading verification file');
   }
 });
@@ -61,11 +46,10 @@ const HARDCODED_CONFIG = {
   keyBase64: 'QmFnIEF0dHJpYnV0ZXMNCiAgICBsb2NhbEtleUlEOiAwMyAxMiA2MyAzMCBERSAwNyA4MyA0RCA0MyAyQiBCNiAyQSA3NSAzMiBBOSBFNCBGMSBDQyAyMyBFQyANCiAgICBmcmllbmRseU5hbWU6IEFwcGxlIFBheSBNZXJjaGFudCBJZGVudGl0eQ0KS2V5IEF0dHJpYnV0ZXM6IDxObyBBdHRyaWJ1dGVzPg0KLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tDQpNSUlFdlFJQkFEQU5CZ2txaGtpRzl3MEJBUUVGQUFTQ0JLY3dnZ1NqQWdFQUFvSUJBUURCdk12WGtFc2p3dzdEDQo1MWo3Snl1U3JQSVJjUFhGODRwdU5Ndm1YR0ppRmRzYjd6YklnbmhwOE5XYjl2QSttbzlPRnZGT1JhbCttb1haDQpNVjdjV21ob1kwUmc5WkoyeDZkS1VBd1B0MURHSTBWT2lHcERJOXJpMjJKQm1tV01WQVlHTDhJakQvVkZxQm14DQpmeWFYNHYzcG1OeUR4TlhZV3pVRFVrZWQvZEt4ZkxrUXN3bmk5MWZPeC8rVEZtSi9XdWhuYWRsdFM2cHdqR2RxDQpjZFdCemVZbit6cHVnaVBFT01qWU4zRjZHR3FWT1U0TGxxUkV1dGJBSmpWSXV0T1VWT1RQd1FIZGxtSWJqNXlxDQpQdlFIa1RaZCtWMUNPU0N6eHZlbU9DVUlNMlpTdmtiazQ3eHRpWGtSNGhzSm10cTNDMHNMUEpzTnJFOEFQT0RmDQpoald6c3NlNUFnTUJBQUVDZ2dFQUIwS0R0dlpnRjhmTzdWWVFLN1VxT1FCWnY5VTdveWtwcGxDUjFYWTFINWQ4DQphRWhuV3FNbnBQeW4zSVRTallpdGdicHlzaGF0TDgwcTRvVXE3Z0h3bmZ6STlWaUR5UWRaUkZGZlArclpldHRHDQpmOElLalZmY3lNUjZJdkF6WHZYNmF5VkRWcHl2VHhGcUNSQ0tpZHJiM2ZMaTl6TWJPbFRNb0plOE9hRG5KM2NaDQpmT0J2bFlUUmEwamMydzRhdUlIcGtUcmFLUktQbEtvNEh1a1dsTy8yQlVvNGg5SXZWN2lVcWF3ZDhVNFBPOXd5DQp5RzhXckhPZmcwZmFIank5eW5Ba1ZtSlhOZzQ2YVdVaGlZSmh3N20vbXA5WWlpcFNKNncvU20rMXRLeTllK0FODQpTMjRpc3R5amJHQWFsTzBkVDE2dHhJd0JBL2pvZGZIL01ScDFHamZSNlFLQmdRRGlSeDJKNCt2eWROaDhjYXlIDQpuWVBHSUo3TWpVRkNYQ25YYkllUmlHSUZHd05rT1pUd3BuenA0Z0VwbG84R1R0UjIzQWs4OGVlOXNOYm5KQVFtDQpiL2lZdFFIVFJHWHNuSWcybEFrOXdKYTVOT3BZblFwMDFhd3podUlUVTJYdGlISGFWbVZrYm9JNWxJbnhHNklxDQp4c1lvSU9VbnZyNDFISHEyTTZTWVR3bzN0UUtCZ1FEYkwzaUI3ZkVVMU5NT21OT1AzbUx5NXJtOWdNYUhnSmRkDQpwYUtyY3VTbHVuaHYvbkZvSm5Jdktxc2tHM3E5NFFhcEpqZ0FTengwZ2REZTZJZFpCSW9EWkt1WGtDbE44T2lNDQo0bjgrU0xKMVZwNFNwYTdzU2gveWZhUGFjKzlyc2lVL0NpWVNpVzBQOURxbWg2ZThoTWZnTWRLeE5vTEJzdjdFDQoxWlJyZWxsS2RRS0JnSGNwZmx2TWhNZ0ZVckNPYUk1dW5DT3RzQk1HM0hRbTl2MzBzSndxbDN3YTBybG9QWkJTDQpEUHhhUWNSMS9sSVRGMzZVdCtTNWZCSUFXOXdUc24vUGZicGxzRlZpOHM0ZFRQcDVFVGpOQUZMK2s5OGdySTRFDQpySS9pRzVLVDI5eXdlMHpCTE5vci9EWjRqQUJHVGl0NnpJWDdkTkp1ZDlxZWFkMGo2eTB1aXJIMUFvR0JBTUp6DQpLY2l5N0FiY0RHWE54UnJFWXlvMDhLRWpCbjJkNGl0TlQ3UWttSjVDZ0toeXBlK005QTNPSDhoSHJLdVpYOHhlDQpRSjVhSU1jSGgrTEpqWkcyaWk0YWVIUmNpNWcrMmtCcWpCSVljbUhRdHltNTNTWjVXRUJMb0Rxa1VjcE1YK2krDQpPeXFFeXNHMW5QYXlNR2Y1c0V6QVJyZTZzV1BnUlU4Z1g2eTkvVXNsQW9HQUJWZ2FEemI3bXd2SC9yblFHWDJ1DQp4NFJiNGpiVFJoVjVSeGlKZ2F5cnRkbGloL25vbG9icEk1a2tOL3czdEpzd0lLZ3hqTSt2UnpjZUFwc0ZBR2ZGDQppalBOZ0FZQWhVSGxPdHMvNmFGdCtmd2w4dUc5SEY4SlVqRVlYZEN3UHNsdHBXVHZVMTN2ekpyM1cxOElEY1ZHDQpnVDVmM2I0NlJFbzEvbERzd0xXV0l2Yz0NCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0NCg=='
 };
 
-// 调试：打印环境变量（生产环境可删除）
-console.log('[Config] 使用硬编码配置（环境变量注入失败）');
-console.log('[Config] APPLE_MERCHANT_ID:', HARDCODED_CONFIG.merchantIdentifier);
-console.log('[Config] APPLE_DOMAIN:', HARDCODED_CONFIG.domainName);
-console.log('[Config] CERT_BASE64:', HARDCODED_CONFIG.certBase64 ? '已设置 (' + HARDCODED_CONFIG.certBase64.length + ' 字符)' : '未设置');
+// 启动日志
+console.log('[Apple Pay] 服务器启动中...');
+console.log('[Apple Pay] Merchant ID:', HARDCODED_CONFIG.merchantIdentifier);
+console.log('[Apple Pay] Domain:', HARDCODED_CONFIG.domainName);
 
 // Apple Pay 配置
 const APPLE_PAY_CONFIG = {
