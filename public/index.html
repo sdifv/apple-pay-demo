@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apple Pay Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .product-card {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .product-icon {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+
+    .product-info {
+      flex: 1;
+    }
+
+    .product-name {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .product-price {
+      font-size: 24px;
+      color: #667eea;
+      font-weight: 700;
+    }
+
+    /* Apple Pay 按钮样式 */
+    .apple-pay-button {
+      display: none;
+      width: 100%;
+      height: 50px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background-color: #000;
+      background-image: -webkit-named-image(apple-pay-logo-white);
+      background-size: 60% 60%;
+      background-position: 50% 50%;
+      background-repeat: no-repeat;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+
+    .apple-pay-button:hover {
+      opacity: 0.9;
+      transform: scale(1.02);
+    }
+
+    .apple-pay-button:active {
+      transform: scale(0.98);
+    }
+
+    /* 备用按钮样式（用于不支持 Apple Pay 的浏览器） */
+    .apple-pay-button-fallback {
+      display: none;
+      width: 100%;
+      height: 50px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background-color: #000;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+
+    .apple-pay-button-fallback:hover {
+      opacity: 0.9;
+    }
+
+    /* 状态提示 */
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status.info {
+      display: block;
+      background: #e3f2fd;
+      color: #1976d2;
+      border: 1px solid #bbdefb;
+    }
+
+    .status.success {
+      display: block;
+      background: #e8f5e9;
+      color: #388e3c;
+      border: 1px solid #a5d6a7;
+    }
+
+    .status.error {
+      display: block;
+      background: #ffebee;
+      color: #d32f2f;
+      border: 1px solid #ef9a9a;
+    }
+
+    .status.loading {
+      display: block;
+      background: #fff3e0;
+      color: #f57c00;
+      border: 1px solid #ffcc80;
+    }
+
+    /* 配置区域 */
+    .config-section {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .config-section h3 {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .config-item {
+      margin-bottom: 15px;
+    }
+
+    .config-item label {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .config-item input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .config-item input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: #5a6fd6;
+    }
+
+    /* 日志区域 */
+    .log-section {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .log-section h4 {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .log-entry {
+      font-size: 12px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      padding: 4px 0;
+      border-bottom: 1px solid #e0e0e0;
+      color: #333;
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-entry.error {
+      color: #d32f2f;
+    }
+
+    .log-entry.success {
+      color: #388e3c;
+    }
+
+    /* 响应式 */
+    @media (max-width: 480px) {
+      .container {
+        padding: 25px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Apple Pay Demo</h1>
+    <p class="subtitle">测试 Apple Pay 集成</p>
+
+    <div class="product-card">
+      <div class="product-icon">🛍️</div>
+      <div class="product-info">
+        <div class="product-name">示例商品</div>
+        <div class="product-price">¥9.99</div>
+      </div>
+    </div>
+
+    <!-- Apple Pay 按钮 -->
+    <button id="applePayButton" class="apple-pay-button" lang="zh"></button>
+    <button id="applePayButtonFallback" class="apple-pay-button-fallback">
+      使用 Apple Pay 支付
+    </button>
+
+    <!-- 状态提示 -->
+    <div id="status" class="status info">
+      正在检查 Apple Pay 可用性...
+    </div>
+
+    <!-- 配置区域 -->
+    <div class="config-section">
+      <h3>配置</h3>
+      <div class="config-item">
+        <label>Merchant Identifier</label>
+        <input type="text" id="merchantId" placeholder="merchant.com.yourcompany.app" value="">
+      </div>
+      <button id="checkConfigBtn" class="btn-primary">检查服务器配置</button>
+    </div>
+
+    <!-- 日志区域 -->
+    <div class="log-section" id="logSection" style="display: none;">
+      <h4>操作日志</h4>
+      <div id="logContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== 配置 ====================
+    const CONFIG = {
+      // 默认 Merchant ID（可以从服务器获取或用户输入）
+      merchantIdentifier: 'merchant.com.yourcompany.app',
+      
+      // 支付金额
+      amount: '9.99',
+      currency: 'CNY',
+      country: 'CN',
+      
+      // 服务器 API 地址
+      apiBaseUrl: ''  // 空字符串表示使用相对路径
+    };
+
+    // ==================== 日志工具 ====================
+    const logger = {
+      container: document.getElementById('logContainer'),
+      section: document.getElementById('logSection'),
+      
+      log(message, type = 'info') {
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        this.container.appendChild(entry);
+        this.section.style.display = 'block';
+        this.container.scrollTop = this.container.scrollHeight;
+        console.log(`[Apple Pay] ${message}`);
+      },
+      
+      error(message) {
+        this.log(message, 'error');
+      },
+      
+      success(message) {
+        this.log(message, 'success');
+      }
+    };
+
+    // ==================== 状态管理 ====================
+    const statusEl = document.getElementById('status');
+    
+    function showStatus(message, type = 'info') {
+      statusEl.className = `status ${type}`;
+      statusEl.textContent = message;
+    }
+
+    // ==================== Apple Pay 检测 ====================
+    function checkApplePaySupport() {
+      // 检查是否支持 Apple Pay
+      if (!window.ApplePaySession) {
+        showStatus('当前浏览器不支持 Apple Pay', 'error');
+        logger.error('Apple Pay Session API 不可用');
+        return false;
+      }
+
+      // 检查是否可以发起支付
+      if (!ApplePaySession.canMakePayments()) {
+        showStatus('此设备无法使用 Apple Pay', 'error');
+        logger.error('设备不支持 Apple Pay 支付');
+        return false;
+      }
+
+      // 检查是否有可用的支付卡片
+      ApplePaySession.canMakePaymentsWithActiveCard(CONFIG.merchantIdentifier)
+        .then(canMakePayments => {
+          if (canMakePayments) {
+            showStatus('Apple Pay 可用，点击按钮开始支付', 'success');
+            logger.success('Apple Pay 可用且有有效卡片');
+            showApplePayButton();
+          } else {
+            showStatus('Apple Pay 可用，但没有配置支付卡片', 'info');
+            logger.log('Apple Pay 可用，但没有配置支付卡片');
+            showApplePayButton();
+          }
+        })
+        .catch(err => {
+          showStatus('检查 Apple Pay 状态失败', 'error');
+          logger.error(`检查失败: ${err.message}`);
+        });
+
+      return true;
+    }
+
+    // ==================== 显示 Apple Pay 按钮 ====================
+    function showApplePayButton() {
+      const button = document.getElementById('applePayButton');
+      const fallbackButton = document.getElementById('applePayButtonFallback');
+      
+      // 检查是否支持 -apple-pay-button 样式
+      if (CSS.supports('-webkit-appearance', '-apple-pay-button')) {
+        button.style.display = 'block';
+        button.addEventListener('click', startApplePay);
+      } else {
+        fallbackButton.style.display = 'block';
+        fallbackButton.addEventListener('click', startApplePay);
+      }
+    }
+
+    // ==================== 启动 Apple Pay 支付 ====================
+    function startApplePay() {
+      logger.log('开始 Apple Pay 支付流程');
+      showStatus('正在启动 Apple Pay...', 'loading');
+
+      // 支付请求配置
+      const paymentRequest = {
+        countryCode: CONFIG.country,
+        currencyCode: CONFIG.currency,
+        supportedNetworks: ['visa', 'masterCard', 'amex', 'chinaUnionPay'],
+        merchantCapabilities: ['supports3DS', 'supportsCredit', 'supportsDebit'],
+        total: {
+          label: '示例商店',
+          amount: CONFIG.amount,
+          type: 'final'
+        },
+        requiredBillingContactFields: ['postalAddress', 'name'],
+        requiredShippingContactFields: ['postalAddress', 'name', 'phone', 'email']
+      };
+
+      try {
+        // 创建 Apple Pay Session
+        const session = new ApplePaySession(14, paymentRequest);
+        
+        // ==================== 商户验证事件 ====================
+        session.onvalidatemerchant = (event) => {
+          logger.log('触发商户验证事件');
+          showStatus('正在验证商户...', 'loading');
+
+          const validationURL = event.validationURL;
+          logger.log(`验证 URL: ${validationURL}`);
+
+          // 调用后端验证接口
+          fetch(`${CONFIG.apiBaseUrl}/validate-merchant`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              validationURL: validationURL
+            })
+          })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`服务器返回错误: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(merchantSession => {
+            logger.success('商户验证成功');
+            showStatus('商户验证成功，等待用户确认...', 'info');
+            // 完成商户验证
+            session.completeMerchantValidation(merchantSession);
+          })
+          .catch(error => {
+            logger.error(`商户验证失败: ${error.message}`);
+            showStatus(`商户验证失败: ${error.message}`, 'error');
+            session.abort();
+          });
+        };
+
+        // ==================== 支付授权事件 ====================
+        session.onpaymentauthorized = (event) => {
+          logger.log('用户已授权支付');
+          logger.log(`支付 Token: ${JSON.stringify(event.payment.token, null, 2)}`);
+          showStatus('支付已授权，正在处理...', 'loading');
+
+          // 发送支付数据到后端
+          fetch(`${CONFIG.apiBaseUrl}/process-payment`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              payment: event.payment
+            })
+          })
+          .then(response => response.json())
+          .then(result => {
+            if (result.success) {
+              logger.success('支付处理成功');
+              showStatus('支付成功！', 'success');
+              // 完成支付，显示成功
+              session.completePayment(ApplePaySession.STATUS_SUCCESS);
+            } else {
+              throw new Error(result.message || '支付处理失败');
+            }
+          })
+          .catch(error => {
+            logger.error(`支付处理失败: ${error.message}`);
+            showStatus(`支付失败: ${error.message}`, 'error');
+            // 完成支付，显示失败
+            session.completePayment(ApplePaySession.STATUS_FAILURE);
+          });
+        };
+
+        // ==================== 取消事件 ====================
+        session.oncancel = (event) => {
+          logger.log('用户取消了支付');
+          showStatus('支付已取消', 'info');
+        };
+
+        // ==================== 选择配送方式事件（可选）====================
+        session.onshippingmethodselected = (event) => {
+          logger.log(`选择配送方式: ${event.shippingMethod.identifier}`);
+          // 可以在这里更新总价
+          const update = {
+            status: ApplePaySession.STATUS_SUCCESS,
+            newTotal: {
+              label: '示例商店',
+              amount: CONFIG.amount,
+              type: 'final'
+            }
+          };
+          session.completeShippingMethodSelection(update);
+        };
+
+        // ==================== 选择配送地址事件（可选）====================
+        session.onshippingcontactselected = (event) => {
+          logger.log('选择配送地址');
+          const update = {
+            status: ApplePaySession.STATUS_SUCCESS,
+            newShippingMethods: [],
+            newTotal: {
+              label: '示例商店',
+              amount: CONFIG.amount,
+              type: 'final'
+            },
+            newLineItems: []
+          };
+          session.completeShippingContactSelection(update);
+        };
+
+        // 开始 Apple Pay Session
+        session.begin();
+        logger.log('Apple Pay Session 已启动');
+
+      } catch (error) {
+        logger.error(`启动 Apple Pay 失败: ${error.message}`);
+        showStatus(`启动失败: ${error.message}`, 'error');
+      }
+    }
+
+    // ==================== 检查服务器配置 ====================
+    document.getElementById('checkConfigBtn').addEventListener('click', () => {
+      logger.log('检查服务器配置...');
+      showStatus('正在检查服务器配置...', 'loading');
+
+      fetch(`${CONFIG.apiBaseUrl}/config-check`)
+        .then(response => response.json())
+        .then(data => {
+          logger.log(`服务器配置: ${JSON.stringify(data.checks, null, 2)}`);
+          if (data.ready) {
+            showStatus('服务器配置正确', 'success');
+            logger.success('服务器配置检查通过');
+          } else {
+            showStatus(`服务器配置不完整: ${data.message}`, 'error');
+            logger.error('服务器配置不完整');
+          }
+        })
+        .catch(error => {
+          showStatus(`无法连接服务器: ${error.message}`, 'error');
+          logger.error(`服务器连接失败: ${error.message}`);
+        });
+    });
+
+    // ==================== 初始化 ====================
+    document.addEventListener('DOMContentLoaded', () => {
+      logger.log('页面加载完成');
+      
+      // 检查 Apple Pay 支持
+      checkApplePaySupport();
+    });
+  </script>
+</body>
+</html>
