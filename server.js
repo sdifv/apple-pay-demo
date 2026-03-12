@@ -273,16 +273,22 @@ app.get('/health', (req, res) => {
  * 用于验证服务器配置是否正确
  */
 app.get('/config-check', (req, res) => {
+  // 检查证书是否存在（支持文件或 Base64）
+  const certAvailable = CERT_CONFIG.certBase64 || fs.existsSync(CERT_CONFIG.certPath);
+  const keyAvailable = CERT_CONFIG.keyBase64 || fs.existsSync(CERT_CONFIG.keyPath);
+  
   const checks = {
     merchantIdentifier: APPLE_PAY_CONFIG.merchantIdentifier,
     domainName: APPLE_PAY_CONFIG.domainName,
     displayName: APPLE_PAY_CONFIG.displayName,
-    certExists: fs.existsSync(CERT_CONFIG.certPath),
-    keyExists: fs.existsSync(CERT_CONFIG.keyPath),
+    certExists: certAvailable,
+    keyExists: keyAvailable,
+    certSource: CERT_CONFIG.certBase64 ? 'base64' : 'file',
+    keySource: CERT_CONFIG.keyBase64 ? 'base64' : 'file',
     caExists: CERT_CONFIG.caPath ? fs.existsSync(CERT_CONFIG.caPath) : null
   };
 
-  const allReady = checks.certExists && checks.keyExists;
+  const allReady = certAvailable && keyAvailable;
 
   res.json({
     ready: allReady,
