@@ -13,21 +13,30 @@ app.use(express.json());
 app.get('/.well-known/apple-developer-merchantid-domain-association', (req, res) => {
   const filePath = path.join(__dirname, 'public', '.well-known', 'apple-developer-merchantid-domain-association');
   
-  // 设置正确的 Content-Type，避免被浏览器/代理处理
-  res.setHeader('Content-Type', 'application/octet-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
+  console.log('[Apple Pay] 验证文件请求来自:', req.headers['user-agent'] || 'Unknown');
+  console.log('[Apple Pay] 请求 IP:', req.ip);
   
-  // 直接发送文件内容
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error('[Apple Pay] 验证文件访问失败:', err.message);
-      res.status(404).send('Verification file not found');
-    } else {
-      console.log('[Apple Pay] 验证文件已提供');
-    }
-  });
+  // 检查文件是否存在
+  if (!fs.existsSync(filePath)) {
+    console.error('[Apple Pay] 验证文件不存在:', filePath);
+    return res.status(404).send('Verification file not found');
+  }
+  
+  // 读取并发送文件内容
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    
+    // 设置正确的 HTTP 头
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Length', Buffer.byteLength(content));
+    res.setHeader('Cache-Control', 'public, max-age=0');
+    
+    console.log('[Apple Pay] 验证文件已提供，大小:', content.length, 'bytes');
+    res.send(content);
+  } catch (err) {
+    console.error('[Apple Pay] 读取验证文件失败:', err.message);
+    res.status(500).send('Error reading verification file');
+  }
 });
 
 // 静态文件服务
