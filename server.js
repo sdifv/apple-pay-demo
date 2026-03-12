@@ -6,6 +6,11 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 443;
 
+// Railway 环境变量调试
+console.log('[Railway] 所有环境变量:', Object.keys(process.env).filter(k => k.includes('APPLE') || k.includes('CERT') || k.includes('RAILWAY')));
+console.log('[Railway] PORT:', process.env.PORT);
+console.log('[Railway] RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
+
 // 中间件
 app.use(express.json());
 
