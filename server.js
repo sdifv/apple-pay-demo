@@ -8,6 +8,29 @@ const PORT = process.env.PORT || 443;
 
 // 中间件
 app.use(express.json());
+
+// Apple Pay 域名验证文件 - 必须放在 express.static 之前，确保正确响应
+app.get('/.well-known/apple-developer-merchantid-domain-association', (req, res) => {
+  const filePath = path.join(__dirname, 'public', '.well-known', 'apple-developer-merchantid-domain-association');
+  
+  // 设置正确的 Content-Type，避免被浏览器/代理处理
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
+  // 直接发送文件内容
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('[Apple Pay] 验证文件访问失败:', err.message);
+      res.status(404).send('Verification file not found');
+    } else {
+      console.log('[Apple Pay] 验证文件已提供');
+    }
+  });
+});
+
+// 静态文件服务
 app.use(express.static('public'));
 
 // ==================== 配置区域 ====================
