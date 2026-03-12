@@ -45,6 +45,13 @@ app.use(express.static('public'));
 // ==================== 配置区域 ====================
 // 请根据你的实际情况修改以下配置
 
+// 调试：打印环境变量（生产环境可删除）
+console.log('[Config] APPLE_MERCHANT_ID:', process.env.APPLE_MERCHANT_ID ? '已设置' : '未设置');
+console.log('[Config] APPLE_DOMAIN:', process.env.APPLE_DOMAIN ? '已设置' : '未设置');
+console.log('[Config] APPLE_DISPLAY_NAME:', process.env.APPLE_DISPLAY_NAME ? '已设置' : '未设置');
+console.log('[Config] CERT_BASE64:', process.env.CERT_BASE64 ? '已设置 (' + process.env.CERT_BASE64.length + ' 字符)' : '未设置');
+console.log('[Config] KEY_BASE64:', process.env.KEY_BASE64 ? '已设置 (' + process.env.KEY_BASE64.length + ' 字符)' : '未设置');
+
 // Apple Pay 配置
 const APPLE_PAY_CONFIG = {
   // 你的 Merchant ID（例如：merchant.com.yourcompany.app）
