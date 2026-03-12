@@ -146,6 +146,9 @@ app.post('/validate-merchant', async (req, res) => {
     };
 
     // 向 Apple 服务器发起请求
+    console.log('[Apple Pay] 请求 Apple 服务器...');
+    console.log('[Apple Pay] Payload:', payload);
+    
     const merchantSession = await new Promise((resolve, reject) => {
       const appleReq = https.request(validationURL, requestOptions, (appleRes) => {
         let data = '';
@@ -155,6 +158,9 @@ app.post('/validate-merchant', async (req, res) => {
         });
         
         appleRes.on('end', () => {
+          console.log('[Apple Pay] Apple 响应状态:', appleRes.statusCode);
+          console.log('[Apple Pay] Apple 响应数据:', data.substring(0, 500));
+          
           if (appleRes.statusCode === 200) {
             try {
               const session = JSON.parse(data);
