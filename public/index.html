@@ -494,6 +494,16 @@
       const txConfig = getTransactionConfig();
       logger.log(`交易配置: 国家=${txConfig.countryCode}, 币种=${txConfig.currencyCode}, MCC=${txConfig.merchantMCC}, 金额=${txConfig.amount}`);
 
+      // 格式化金额（某些币种如 JPY、KRW 等不支持小数）
+      let formattedAmount = txConfig.amount;
+      const noDecimalCurrencies = ['JPY', 'KRW', 'VND', 'ISK', 'CLP', 'PYG', 'RWF'];
+      if (noDecimalCurrencies.includes(txConfig.currencyCode)) {
+        formattedAmount = Math.round(parseFloat(txConfig.amount)).toString();
+      } else {
+        // 确保金额有两位小数
+        formattedAmount = parseFloat(txConfig.amount).toFixed(2);
+      }
+
       // 支付请求配置
       const paymentRequest = {
         countryCode: txConfig.countryCode,
@@ -502,12 +512,14 @@
         merchantCapabilities: ['supports3DS', 'supportsCredit', 'supportsDebit'],
         total: {
           label: txConfig.merchantName,
-          amount: txConfig.amount,
+          amount: formattedAmount,
           type: 'final'
         },
         requiredBillingContactFields: ['postalAddress', 'name'],
         requiredShippingContactFields: ['postalAddress', 'name', 'phone', 'email']
       };
+      
+      logger.log(`支付请求: ${JSON.stringify(paymentRequest, null, 2)}`);
 
       try {
         // 创建 Apple Pay Session
@@ -602,8 +614,8 @@
           const update = {
             status: ApplePaySession.STATUS_SUCCESS,
             newTotal: {
-              label: '示例商店',
-              amount: CONFIG.amount,
+              label: txConfig.merchantName,
+              amount: formattedAmount,
               type: 'final'
             }
           };
@@ -617,8 +629,8 @@
             status: ApplePaySession.STATUS_SUCCESS,
             newShippingMethods: [],
             newTotal: {
-              label: '示例商店',
-              amount: CONFIG.amount,
+              label: txConfig.merchantName,
+              amount: formattedAmount,
               type: 'final'
             },
             newLineItems: []
