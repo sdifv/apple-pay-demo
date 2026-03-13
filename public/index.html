@@ -202,6 +202,31 @@
       border-color: #667eea;
     }
 
+    .config-item select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      background-color: white;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .config-item select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .config-row {
+      display: flex;
+      gap: 15px;
+    }
+
+    .config-row .config-item {
+      flex: 1;
+    }
+
     .btn-primary {
       width: 100%;
       padding: 12px;
@@ -277,7 +302,7 @@
       <div class="product-icon">🛍️</div>
       <div class="product-info">
         <div class="product-name">示例商品</div>
-        <div class="product-price">¥9.99</div>
+        <div class="product-price" id="productPrice">¥9.99</div>
       </div>
     </div>
 
@@ -294,10 +319,56 @@
 
     <!-- 配置区域 -->
     <div class="config-section">
-      <h3>配置</h3>
+      <h3>基础配置</h3>
       <div class="config-item">
         <label>Merchant Identifier</label>
         <input type="text" id="merchantId" placeholder="merchant.com.yourcompany.app" value="">
+      </div>
+      
+      <h3 style="margin-top: 20px;">交易配置</h3>
+      <div class="config-row">
+        <div class="config-item">
+          <label>国家/地区</label>
+          <select id="countryCode">
+            <option value="CN" selected>中国 (CN)</option>
+            <option value="US">美国 (US)</option>
+            <option value="HK">香港 (HK)</option>
+            <option value="SG">新加坡 (SG)</option>
+            <option value="JP">日本 (JP)</option>
+            <option value="GB">英国 (GB)</option>
+            <option value="DE">德国 (DE)</option>
+            <option value="FR">法国 (FR)</option>
+            <option value="AU">澳大利亚 (AU)</option>
+            <option value="CA">加拿大 (CA)</option>
+          </select>
+        </div>
+        <div class="config-item">
+          <label>币种</label>
+          <select id="currencyCode">
+            <option value="CNY" selected>人民币 (CNY)</option>
+            <option value="USD">美元 (USD)</option>
+            <option value="HKD">港币 (HKD)</option>
+            <option value="SGD">新加坡元 (SGD)</option>
+            <option value="JPY">日元 (JPY)</option>
+            <option value="GBP">英镑 (GBP)</option>
+            <option value="EUR">欧元 (EUR)</option>
+            <option value="AUD">澳元 (AUD)</option>
+            <option value="CAD">加元 (CAD)</option>
+          </select>
+        </div>
+      </div>
+      <div class="config-item">
+        <label>商户 MCC 代码</label>
+        <input type="text" id="merchantMCC" placeholder="例如: 5411 (超市), 5812 (餐厅)" value="5999">
+        <small style="color: #999; font-size: 11px;">MCC (Merchant Category Code) 用于标识商户类型</small>
+      </div>
+      <div class="config-item">
+        <label>商户名称</label>
+        <input type="text" id="merchantName" placeholder="您的商户名称" value="示例商店">
+      </div>
+      <div class="config-item">
+        <label>支付金额</label>
+        <input type="number" id="amount" placeholder="9.99" value="9.99" step="0.01">
       </div>
       <button id="checkConfigBtn" class="btn-primary">检查服务器配置</button>
     </div>
@@ -315,14 +386,20 @@
       // 默认 Merchant ID（可以从服务器获取或用户输入）
       merchantIdentifier: 'merchant.com.yourcompany.app',
       
-      // 支付金额
-      amount: '9.99',
-      currency: 'CNY',
-      country: 'CN',
-      
       // 服务器 API 地址
       apiBaseUrl: ''  // 空字符串表示使用相对路径
     };
+
+    // ==================== 获取交易配置 ====================
+    function getTransactionConfig() {
+      return {
+        countryCode: document.getElementById('countryCode').value,
+        currencyCode: document.getElementById('currencyCode').value,
+        merchantMCC: document.getElementById('merchantMCC').value || '5999',
+        merchantName: document.getElementById('merchantName').value || '示例商店',
+        amount: document.getElementById('amount').value || '9.99'
+      };
+    }
 
     // ==================== 日志工具 ====================
     const logger = {
@@ -413,15 +490,19 @@
       logger.log('开始 Apple Pay 支付流程');
       showStatus('正在启动 Apple Pay...', 'loading');
 
+      // 获取用户配置的交易参数
+      const txConfig = getTransactionConfig();
+      logger.log(`交易配置: 国家=${txConfig.countryCode}, 币种=${txConfig.currencyCode}, MCC=${txConfig.merchantMCC}, 金额=${txConfig.amount}`);
+
       // 支付请求配置
       const paymentRequest = {
-        countryCode: CONFIG.country,
-        currencyCode: CONFIG.currency,
+        countryCode: txConfig.countryCode,
+        currencyCode: txConfig.currencyCode,
         supportedNetworks: ['visa', 'masterCard', 'amex', 'chinaUnionPay'],
         merchantCapabilities: ['supports3DS', 'supportsCredit', 'supportsDebit'],
         total: {
-          label: '示例商店',
-          amount: CONFIG.amount,
+          label: txConfig.merchantName,
+          amount: txConfig.amount,
           type: 'final'
         },
         requiredBillingContactFields: ['postalAddress', 'name'],
@@ -475,6 +556,9 @@
           logger.log(`支付 Token: ${JSON.stringify(event.payment.token, null, 2)}`);
           showStatus('支付已授权，正在处理...', 'loading');
 
+          // 获取当前交易配置
+          const txConfig = getTransactionConfig();
+
           // 发送支付数据到后端
           fetch(`${CONFIG.apiBaseUrl}/process-payment`, {
             method: 'POST',
@@ -482,7 +566,8 @@
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              payment: event.payment
+              payment: event.payment,
+              transactionConfig: txConfig
             })
           })
           .then(response => response.json())
@@ -574,9 +659,37 @@
         });
     });
 
+    // ==================== 更新产品价格显示 ====================
+    function updateProductDisplay() {
+      const txConfig = getTransactionConfig();
+      const currencySymbols = {
+        'CNY': '¥', 'USD': '$', 'HKD': 'HK$', 'SGD': 'S$', 
+        'JPY': '¥', 'GBP': '£', 'EUR': '€', 'AUD': 'A$', 'CAD': 'C$'
+      };
+      const symbol = currencySymbols[txConfig.currencyCode] || txConfig.currencyCode;
+      document.getElementById('productPrice').textContent = `${symbol}${txConfig.amount}`;
+    }
+
+    // ==================== 监听配置变化 ====================
+    function setupConfigListeners() {
+      const configElements = ['countryCode', 'currencyCode', 'merchantMCC', 'merchantName', 'amount'];
+      configElements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.addEventListener('change', () => {
+            logger.log(`配置已更新: ${id}`);
+            updateProductDisplay();
+          });
+        }
+      });
+    }
+
     // ==================== 初始化 ====================
     document.addEventListener('DOMContentLoaded', () => {
       logger.log('页面加载完成');
+      
+      // 设置配置监听器
+      setupConfigListeners();
       
       // 检查 Apple Pay 支持
       checkApplePaySupport();

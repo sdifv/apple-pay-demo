@@ -194,7 +194,7 @@ app.post('/validate-merchant', async (req, res) => {
  */
 app.post('/process-payment', (req, res) => {
   try {
-    const { payment } = req.body;
+    const { payment, transactionConfig } = req.body;
 
     if (!payment || !payment.token) {
       return res.status(400).json({
@@ -205,6 +205,11 @@ app.post('/process-payment', (req, res) => {
 
     console.log('[Apple Pay] 收到支付请求');
     console.log('[Apple Pay] 支付 Token:', JSON.stringify(payment.token, null, 2));
+    
+    // 记录交易配置（如果提供）
+    if (transactionConfig) {
+      console.log('[Apple Pay] 交易配置:', JSON.stringify(transactionConfig, null, 2));
+    }
 
     // ===========================================
     // 这里是你处理支付 token 的地方
@@ -221,12 +226,19 @@ app.post('/process-payment', (req, res) => {
     // ===========================================
     
     // TODO: 在这里集成你的支付处理逻辑
+    // 可以使用 transactionConfig 中的信息：
+    // - transactionConfig.countryCode: 国家/地区代码
+    // - transactionConfig.currencyCode: 币种代码
+    // - transactionConfig.merchantMCC: 商户 MCC 代码
+    // - transactionConfig.merchantName: 商户名称
+    // - transactionConfig.amount: 支付金额
     
     // 模拟成功响应
     res.json({
       success: true,
       message: '支付 token 已接收',
       token: payment.token,
+      transactionConfig: transactionConfig || null,
       timestamp: new Date().toISOString()
     });
 
